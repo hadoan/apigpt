@@ -29,7 +29,7 @@ const NewRequest = ({ collection, item, isEphemeral, onClose }) => {
   const Icon = forwardRef((props, ref) => {
     return (
       <div ref={ref} className="flex items-center justify-end auth-type-label select-none">
-        {curlRequestTypeDetected === 'http-request' ? "HTTP" : "GraphQL"}
+        {curlRequestTypeDetected === 'http-request' ? 'HTTP' : 'GraphQL'}
         <IconCaretDown className="caret ml-1 mr-1" size={14} strokeWidth={2} />
       </div>
     );
@@ -82,7 +82,8 @@ const NewRequest = ({ collection, item, isEphemeral, onClose }) => {
       requestType: getRequestType(collectionPresets),
       requestUrl: collectionPresets.requestUrl || '',
       requestMethod: 'GET',
-      curlCommand: ''
+      curlCommand: '',
+      aiPrompt: ''
     },
     validationSchema: Yup.object({
       requestName: Yup.string()
@@ -107,9 +108,21 @@ const NewRequest = ({ collection, item, isEphemeral, onClose }) => {
             message: `Invalid cURL Command`,
             test: (value) => getRequestFromCurlCommand(value) !== null
           })
-      })
+      }),
+      // aiPrompt: Yup.string().when('requestType', {
+      //   is: (requestType) => requestType === 'from-ai-prompt',
+      //   then: Yup.string()
+      //     .min(1, 'must be at least 1 character')
+      //     .required('AI promt is required')
+      //     .test({
+      //       name: 'aiPrompt',
+      //       message: `Invalid AI Prompt`,
+      //       test: (value) => getRequestFromAIPromptCommand(value) !== null
+      //     })
+      // })
     }),
     onSubmit: (values) => {
+      console.log("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", values)
       if (isEphemeral) {
         const uid = uuid();
         dispatch(
@@ -150,10 +163,34 @@ const NewRequest = ({ collection, item, isEphemeral, onClose }) => {
         )
           .then(() => {
             toast.success('New request created!');
-            onClose()
+            onClose();
           })
           .catch((err) => toast.error(err ? err.message : 'An error occurred while adding the request'));
-      } else {
+      } 
+      // else if (values.requestType === 'from-ai-prompt') {
+      //   // const request = getRequestFromCurlCommand(values.curlCommand, curlRequestTypeDetected);
+      //   // dispatch(
+      //   //   newHttpRequest({
+      //   //     requestName: values.requestName,
+      //   //     requestType: curlRequestTypeDetected,
+      //   //     requestUrl: request.url,
+      //   //     requestMethod: request.method,
+      //   //     collectionUid: collection.uid,
+      //   //     itemUid: item ? item.uid : null,
+      //   //     headers: request.headers,
+      //   //     body: request.body,
+      //   //     auth: request.auth
+      //   //   })
+      //   // )
+      //   //   .then(() => {
+      //   //     toast.success('New request created!');
+      //   //     onClose();
+      //   //   })
+      //   //   .catch((err) => toast.error(err ? err.message : 'An error occurred while adding the request'));
+
+      //   alert('no logic');
+      // }
+      else {
         dispatch(
           newHttpRequest({
             requestName: values.requestName,
@@ -166,7 +203,7 @@ const NewRequest = ({ collection, item, isEphemeral, onClose }) => {
         )
           .then(() => {
             toast.success('New request created!');
-            onClose()
+            onClose();
           })
           .catch((err) => toast.error(err ? err.message : 'An error occurred while adding the request'));
       }
@@ -221,7 +258,7 @@ const NewRequest = ({ collection, item, isEphemeral, onClose }) => {
   return (
     <StyledWrapper>
       <Modal size="md" title="New Request" confirmText="Create" handleConfirm={onSubmit} handleCancel={onClose}>
-        <form className="bruno-form" onSubmit={e => e.preventDefault()}>
+        <form className="bruno-form" onSubmit={(e) => e.preventDefault()}>
           <div>
             <label htmlFor="requestName" className="block font-semibold">
               Type
@@ -270,6 +307,20 @@ const NewRequest = ({ collection, item, isEphemeral, onClose }) => {
               <label htmlFor="from-curl" className="ml-1 cursor-pointer select-none">
                 From cURL
               </label>
+
+              {/* <input
+                id="from-ai-prompt"
+                className="cursor-pointer ml-auto"
+                type="radio"
+                name="requestType"
+                onChange={formik.handleChange}
+                value="from-ai-prompt"
+                checked={formik.values.requestType === 'from-ai-prompt'}
+              /> */}
+
+              <label htmlFor="from-curl" className="ml-1 cursor-pointer select-none">
+                AI Assistant
+              </label>
             </div>
           </div>
           <div className="mt-4">
@@ -295,77 +346,95 @@ const NewRequest = ({ collection, item, isEphemeral, onClose }) => {
             ) : null}
           </div>
           {formik.values.requestType !== 'from-curl' ? (
-            <>
-              <div className="mt-4">
-                <label htmlFor="request-url" className="block font-semibold">
-                  URL
-                </label>
+            formik.values.requestType !== 'from-ai-prompt' ? (
+              <>
+                <div className="mt-4">
+                  <label htmlFor="request-url" className="block font-semibold">
+                    URL
+                  </label>
 
-                <div className="flex items-center mt-2 ">
-                  <div className="flex items-center h-full method-selector-container">
-                    <HttpMethodSelector
-                      method={formik.values.requestMethod}
-                      onMethodSelect={(val) => formik.setFieldValue('requestMethod', val)}
-                    />
+                  <div className="flex items-center mt-2 ">
+                    <div className="flex items-center h-full method-selector-container">
+                      <HttpMethodSelector
+                        method={formik.values.requestMethod}
+                        onMethodSelect={(val) => formik.setFieldValue('requestMethod', val)}
+                      />
+                    </div>
+                    <div className="flex items-center flex-grow input-container h-full">
+                      <input
+                        id="request-url"
+                        type="text"
+                        name="requestUrl"
+                        placeholder="Request URL"
+                        className="px-3 w-full "
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        spellCheck="false"
+                        onChange={formik.handleChange}
+                        value={formik.values.requestUrl || ''}
+                        onPaste={handlePaste}
+                      />
+                    </div>
                   </div>
-                  <div className="flex items-center flex-grow input-container h-full">
-                    <input
-                      id="request-url"
-                      type="text"
-                      name="requestUrl"
-                      placeholder="Request URL"
-                      className="px-3 w-full "
-                      autoComplete="off"
-                      autoCorrect="off"
-                      autoCapitalize="off"
-                      spellCheck="false"
-                      onChange={formik.handleChange}
-                      value={formik.values.requestUrl || ''}
-                      onPaste={handlePaste}
-                    />
-                  </div>
+                  {formik.touched.requestUrl && formik.errors.requestUrl ? (
+                    <div className="text-red-500">{formik.errors.requestUrl}</div>
+                  ) : null}
                 </div>
-                {formik.touched.requestUrl && formik.errors.requestUrl ? (
-                  <div className="text-red-500">{formik.errors.requestUrl}</div>
-                ) : null}
-              </div>
-            </>
+              </>
+            ) : (
+              <>
+                <div className="mt-4">
+                  <label htmlFor="request-url" className="block font-semibold">
+                    URL
+                  </label>
+
+                  <div className="flex items-center mt-2 ">
+                    <div className="flex items-center h-full method-selector-container">
+                      <HttpMethodSelector
+                        method={formik.values.requestMethod}
+                        onMethodSelect={(val) => formik.setFieldValue('requestMethod', val)}
+                      />
+                    </div>
+                    <div className="flex items-center flex-grow input-container h-full">
+                      <input
+                        id="request-url"
+                        type="text"
+                        name="requestUrl"
+                        placeholder="Request URL"
+                        className="px-3 w-full "
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        spellCheck="false"
+                        onChange={formik.handleChange}
+                        value={formik.values.requestUrl || ''}
+                        onPaste={handlePaste}
+                      />
+                    </div>
+                  </div>
+                  {formik.touched.requestUrl && formik.errors.requestUrl ? (
+                    <div className="text-red-500">{formik.errors.requestUrl}</div>
+                  ) : null}
+                </div>
+              </>
+            )
           ) : (
             <div className="mt-4">
               <div className="flex justify-between">
                 <label htmlFor="request-url" className="block font-semibold">
-                  cURL Command
+                  AI Prompt
                 </label>
-                <Dropdown className="dropdown" onCreate={onDropdownCreate} icon={<Icon />} placement="bottom-end">
-                  <div
-                    className="dropdown-item"
-                    onClick={() => {
-                      dropdownTippyRef.current.hide();
-                      curlRequestTypeChange('http-request');
-                    }}
-                  >
-                    HTTP
-                  </div>
-                  <div
-                    className="dropdown-item"
-                    onClick={() => {
-                      dropdownTippyRef.current.hide();
-                      curlRequestTypeChange('graphql-request');
-                    }}
-                  >
-                    GraphQL
-                  </div>
-                </Dropdown>
               </div>
               <textarea
-                name="curlCommand"
-                placeholder="Enter cURL request here.."
+                name="aiPrompt"
+                placeholder="Enter your AI Prompt here ..."
                 className="block textbox w-full mt-4 curl-command"
-                value={formik.values.curlCommand}
-                onChange={handleCurlCommandChange}
+                value={formik.values.aiPrompt}
+                onChange={handleAIPromptChange}
               ></textarea>
-              {formik.touched.curlCommand && formik.errors.curlCommand ? (
-                <div className="text-red-500">{formik.errors.curlCommand}</div>
+              {formik.touched.aiPrompt && formik.errors.aiPrompt ? (
+                <div className="text-red-500">{formik.errors.aiPrompt}</div>
               ) : null}
             </div>
           )}
